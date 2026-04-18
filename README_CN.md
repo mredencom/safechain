@@ -5,7 +5,11 @@
 <p align="center">
   <a href="https://pkg.go.dev/github.com/mredencom/safechain"><img src="https://pkg.go.dev/badge/github.com/mredencom/safechain.svg" alt="Go Reference"></a>
   <a href="https://goreportcard.com/report/github.com/mredencom/safechain"><img src="https://goreportcard.com/badge/github.com/mredencom/safechain" alt="Go Report Card"></a>
+  <a href="https://github.com/mredencom/safechain/actions"><img src="https://github.com/mredencom/safechain/workflows/CI/badge.svg" alt="CI"></a>
+  <a href="https://codecov.io/gh/mredencom/safechain"><img src="https://codecov.io/gh/mredencom/safechain/branch/main/graph/badge.svg" alt="Coverage"></a>
+  <a href="https://github.com/mredencom/safechain/releases"><img src="https://img.shields.io/github/v/release/mredencom/safechain?color=blue" alt="Release"></a>
   <a href="https://github.com/mredencom/safechain/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
+  <a href="https://github.com/mredencom/safechain"><img src="https://img.shields.io/github/stars/mredencom/safechain?style=social" alt="Stars"></a>
 </p>
 
 <p align="center">
