@@ -41,6 +41,7 @@ if req != nil && req.Auth != nil && req.Auth.Key != nil &&
 |------|---------|------|
 | `Safe` / `Must` / `OrVal` | 不需要知道哪个字段为 nil | ~4 ns，0 分配 |
 | `Dig` + `S()` | 需要精确知道哪个字段为 nil | ~190 ns/100层，0 分配 |
+| `Ensure` + `Set` | 无需判空构建/赋值深层嵌套结构体 | ~4 ns，0 分配 |
 
 ## 安装
 
@@ -53,20 +54,29 @@ go get github.com/mredencom/safechain
 ```go
 import "github.com/mredencom/safechain"
 
-// 一行搞定 — 任意指针为 nil 就返回零值
+// 读取 — 任意指针为 nil 就返回零值
 token := safechain.Must(func() string {
     return *req.Auth.Key.Session.Token
 })
 
-// 带默认值
+// 读取 — 带默认值
 token := safechain.OrVal(func() string {
     return *req.Auth.Key.Session.Token
 }, "N/A")
 
-// comma-ok 风格
+// 读取 — comma-ok 风格
 token, ok := safechain.Safe(func() string {
     return *req.Auth.Key.Session.Token
 })
+
+// 写入 — 构建嵌套结构体并赋值，无需判空
+var req Request
+safechain.Set(func() *string {
+    safechain.Ensure(&req.Auth)
+    safechain.Ensure(&req.Auth.Key)
+    safechain.Ensure(&req.Auth.Key.Session)
+    return &req.Auth.Key.Session.Token
+}, ptr("my_token"))
 ```
 
 ## API 说明
@@ -293,6 +303,35 @@ IfOk(func() string { return *r.A.Token }, func(token string) {
 // 类似 Safe 但返回 error 而不是 bool
 val, err := SafeErr(func() string { return *r.A.Name })
 // err: "nil pointer dereference: runtime error: ..."
+```
+
+### 写入 — Ensure / Set / SetErr
+
+无需逐层判空即可构建深层嵌套结构体。`Ensure` 自动分配 nil 指针，`Set` 将路径创建与赋值合为一步。
+
+```go
+// Ensure：沿链路初始化 nil 指针
+var req Request
+Ensure(&req.Auth)
+Ensure(&req.Auth.Key)
+Ensure(&req.Auth.Key.Session)
+// req.Auth.Key.Session 已完全初始化
+
+// Set：建链 + 赋值一步搞定，返回 bool
+ok := Set(func() *string {
+    Ensure(&req.Auth)
+    Ensure(&req.Auth.Key)
+    Ensure(&req.Auth.Key.Session)
+    return &req.Auth.Key.Session.Token
+}, ptr("my_token"))
+
+// SetErr：类似 Set 但失败时返回 error
+val, err := SetErr(func() *string {
+    Ensure(&req.Auth)
+    Ensure(&req.Auth.Key)
+    return &req.Auth.Key.Session.Token
+}, ptr("my_token"))
+// err: "set failed: runtime error: invalid memory address..."
 ```
 
 ## 性能测试

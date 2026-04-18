@@ -41,6 +41,7 @@ if req != nil && req.Auth != nil && req.Auth.Key != nil &&
 |----------|----------|----------|
 | `Safe` / `Must` / `OrVal` | Don't need to know *which* field is nil | ~4 ns, 0 alloc |
 | `Dig` + `S()` | Need precise error: *which* field was nil | ~190 ns/100 depth, 0 alloc |
+| `Ensure` + `Set` | Build/assign deeply nested structs without nil checks | ~4 ns, 0 alloc |
 
 ## Installation
 
@@ -53,20 +54,29 @@ go get github.com/mredencom/safechain
 ```go
 import "github.com/mredencom/safechain"
 
-// One-liner — returns zero value if any pointer is nil
+// Read — returns zero value if any pointer is nil
 token := safechain.Must(func() string {
     return *req.Auth.Key.Session.Token
 })
 
-// With fallback
+// Read — with fallback
 token := safechain.OrVal(func() string {
     return *req.Auth.Key.Session.Token
 }, "N/A")
 
-// Comma-ok style
+// Read — comma-ok style
 token, ok := safechain.Safe(func() string {
     return *req.Auth.Key.Session.Token
 })
+
+// Write — build nested struct and assign, no nil checks
+var req Request
+safechain.Set(func() *string {
+    safechain.Ensure(&req.Auth)
+    safechain.Ensure(&req.Auth.Key)
+    safechain.Ensure(&req.Auth.Key.Session)
+    return &req.Auth.Key.Session.Token
+}, ptr("my_token"))
 ```
 
 ## API
@@ -293,6 +303,35 @@ IfOk(func() string { return *r.A.Token }, func(token string) {
 // Like Safe but returns error instead of bool
 val, err := SafeErr(func() string { return *r.A.Name })
 // err: "nil pointer dereference: runtime error: ..."
+```
+
+### Write — Ensure / Set / SetErr
+
+Build out deeply nested structs without nil checks. `Ensure` auto-allocates nil pointers, `Set` combines path creation with assignment.
+
+```go
+// Ensure: initialize nil pointers along the chain
+var req Request
+Ensure(&req.Auth)
+Ensure(&req.Auth.Key)
+Ensure(&req.Auth.Key.Session)
+// req.Auth.Key.Session is now fully initialized
+
+// Set: build chain + assign in one step, returns bool
+ok := Set(func() *string {
+    Ensure(&req.Auth)
+    Ensure(&req.Auth.Key)
+    Ensure(&req.Auth.Key.Session)
+    return &req.Auth.Key.Session.Token
+}, ptr("my_token"))
+
+// SetErr: like Set but returns error on failure
+val, err := SetErr(func() *string {
+    Ensure(&req.Auth)
+    Ensure(&req.Auth.Key)
+    return &req.Auth.Key.Session.Token
+}, ptr("my_token"))
+// err: "set failed: runtime error: invalid memory address..."
 ```
 
 ## Benchmark

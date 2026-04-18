@@ -33,6 +33,7 @@ func main() {
 	fmt.Println()
 
 	exampleSafeMustOrVal()
+	exampleEnsureSet()
 	exampleAndAnyFirst()
 	exampleEqMatch()
 	exampleStringMatchers()
@@ -68,7 +69,58 @@ func exampleSafeMustOrVal() {
 	fmt.Println()
 }
 
-// ---------- 2. And / Any / First ----------
+// ---------- 2. Ensure / Set / SetErr ----------
+
+func exampleEnsureSet() {
+	fmt.Println("--- Ensure / Set / SetErr ---")
+
+	// Build a deeply nested struct from scratch — no nil checks
+	var req Request
+
+	// Ensure: auto-allocate nil pointers along the chain
+	sc.Ensure(&req.Auth)
+	sc.Ensure(&req.Auth.Key)
+	sc.Ensure(&req.Auth.Key.Session)
+	fmt.Printf("After Ensure: Session=%v (non-nil)\n", req.Auth.Key.Session != nil)
+
+	// Set: build chain + assign value in one step
+	var req2 Request
+	ok := sc.Set(func() **string {
+		sc.Ensure(&req2.Auth)
+		sc.Ensure(&req2.Auth.Key)
+		sc.Ensure(&req2.Auth.Key.Session)
+		return &req2.Auth.Key.Session.Token
+	}, ptr("set_token"))
+	fmt.Printf("Set:    ok=%v, token=%q\n", ok, *req2.Auth.Key.Session.Token)
+
+	// Set: overwrite existing value
+	sc.Set(func() *string {
+		return req2.Auth.Key.Session.Token
+	}, "overwritten")
+	fmt.Printf("Set:    token=%q (overwritten)\n", *req2.Auth.Key.Session.Token)
+
+	// SetErr: get error details on failure
+	var nilReq *Request
+	_, err := sc.SetErr(func() *string {
+		return nilReq.Auth.Key.Session.Token // panics
+	}, "val")
+	fmt.Printf("SetErr: err=%v\n", err != nil)
+
+	// Round-trip: Set then Safe read
+	var req3 Request
+	sc.Set(func() **string {
+		sc.Ensure(&req3.Auth)
+		sc.Ensure(&req3.Auth.Key)
+		sc.Ensure(&req3.Auth.Key.Session)
+		return &req3.Auth.Key.Session.Token
+	}, ptr("round_trip"))
+	token := sc.Must(func() string { return *req3.Auth.Key.Session.Token })
+	fmt.Printf("Set→Must: %q\n", token)
+
+	fmt.Println()
+}
+
+// ---------- 3. And / Any / First ----------
 
 func exampleAndAnyFirst() {
 	fmt.Println("--- And / Any / First ---")
