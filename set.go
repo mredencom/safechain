@@ -6,14 +6,12 @@ import "fmt"
 // Ensure & Set: nil-safe deep struct initialization and assignment
 // =============================================================================
 
-// Ensure initializes a nil pointer to a new zero value.
-// Chain multiple calls to build out a deeply nested struct without nil checks.
+// Ensure initializes a nil pointer to a new zero value and returns it.
+// Chain with E() for a compact one-liner.
 //
 //	var req Request
-//	Ensure(&req.Auth)
-//	Ensure(&req.Auth.Key)
-//	Ensure(&req.Auth.Key.Session)
-//	// req.Auth.Key.Session is now fully initialized, no nil checks needed
+//	Ensure(&req.Auth)                    // single level
+//	Ensure(&Ensure(&req.Auth).Key)       // two levels chained
 func Ensure[T any](pp **T) *T {
 	if *pp == nil {
 		*pp = new(T)
@@ -21,15 +19,21 @@ func Ensure[T any](pp **T) *T {
 	return *pp
 }
 
+// E is a shorthand alias for Ensure. Designed for compact chaining.
+//
+//	var req Request
+//	E(&E(&E(&req.Auth).Key).Session).Token = ptr("hello")
+func E[T any](pp **T) *T {
+	return Ensure(pp)
+}
+
 // Set safely assigns a value deep in a nested struct.
-// Returns true on success, false if the path panics or returns nil.
+// Returns true on success, false if the path panics.
 //
 //	var req Request
 //	Set(func() *string {
-//	    Ensure(&req.Auth)
-//	    Ensure(&req.Auth.Key)
-//	    return &req.Auth.Key.Token
-//	}, "my_token")
+//	    return &E(&E(&E(&req.Auth).Key).Session).Token
+//	}, ptr("my_token"))
 func Set[T any](path func() *T, val T) bool {
 	_, err := SetErr(path, val)
 	return err == nil
@@ -38,10 +42,8 @@ func Set[T any](path func() *T, val T) bool {
 // SetErr is like Set but returns an error describing the failure.
 //
 //	val, err := SetErr(func() *string {
-//	    Ensure(&req.Auth)
-//	    return &req.Auth.Key.Token
-//	}, "my_token")
-//	// err: nil pointer dereference: runtime error: ...
+//	    return &E(&E(&E(&req.Auth).Key).Session).Token
+//	}, ptr("my_token"))
 func SetErr[T any](path func() *T, val T) (result T, err error) {
 	defer func() {
 		if r := recover(); r != nil {

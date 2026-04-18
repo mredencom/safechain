@@ -71,12 +71,7 @@ token, ok := safechain.Safe(func() string {
 
 // Write — build nested struct and assign, no nil checks
 var req Request
-safechain.Set(func() *string {
-    safechain.Ensure(&req.Auth)
-    safechain.Ensure(&req.Auth.Key)
-    safechain.Ensure(&req.Auth.Key.Session)
-    return &req.Auth.Key.Session.Token
-}, ptr("my_token"))
+safechain.E(&safechain.E(&safechain.E(&req.Auth).Key).Session).Token = ptr("my_token")
 ```
 
 ## API
@@ -305,31 +300,33 @@ val, err := SafeErr(func() string { return *r.A.Name })
 // err: "nil pointer dereference: runtime error: ..."
 ```
 
-### Write — Ensure / Set / SetErr
+### Write — E / Ensure / Set / SetErr
 
-Build out deeply nested structs without nil checks. `Ensure` auto-allocates nil pointers, `Set` combines path creation with assignment.
+Build out deeply nested structs without nil checks. `E()` (short for `Ensure`) auto-allocates nil pointer fields and returns the value, enabling one-liner chain assignment.
 
 ```go
-// Ensure: initialize nil pointers along the chain
+// E(): one-liner chain — auto-create all intermediate pointers and assign
 var req Request
-Ensure(&req.Auth)
-Ensure(&req.Auth.Key)
-Ensure(&req.Auth.Key.Session)
-// req.Auth.Key.Session is now fully initialized
+E(&E(&E(&req.Auth).Key).Session).Token = ptr("my_token")
 
-// Set: build chain + assign in one step, returns bool
-ok := Set(func() *string {
-    Ensure(&req.Auth)
-    Ensure(&req.Auth.Key)
-    Ensure(&req.Auth.Key.Session)
-    return &req.Auth.Key.Session.Token
+// Works with value-type fields too — just chain to the parent
+E(&E(&req.Auth).Key).Name = "admin"     // string field
+E(&E(&req.Auth).Key).Score = 100        // int field
+
+// Grab a reference to avoid repeating the chain
+key := E(&E(&req.Auth).Key)
+key.Name = "admin"
+key.Score = 100
+key.Token = ptr("abc")
+
+// Set: chain + assign with panic recovery, returns bool
+ok := Set(func() **string {
+    return &E(&E(&E(&req.Auth).Key).Session).Token
 }, ptr("my_token"))
 
 // SetErr: like Set but returns error on failure
-val, err := SetErr(func() *string {
-    Ensure(&req.Auth)
-    Ensure(&req.Auth.Key)
-    return &req.Auth.Key.Session.Token
+_, err := SetErr(func() **string {
+    return &E(&E(&E(&req.Auth).Key).Session).Token
 }, ptr("my_token"))
 // err: "set failed: runtime error: invalid memory address..."
 ```

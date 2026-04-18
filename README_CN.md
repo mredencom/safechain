@@ -71,12 +71,7 @@ token, ok := safechain.Safe(func() string {
 
 // 写入 — 构建嵌套结构体并赋值，无需判空
 var req Request
-safechain.Set(func() *string {
-    safechain.Ensure(&req.Auth)
-    safechain.Ensure(&req.Auth.Key)
-    safechain.Ensure(&req.Auth.Key.Session)
-    return &req.Auth.Key.Session.Token
-}, ptr("my_token"))
+safechain.E(&safechain.E(&safechain.E(&req.Auth).Key).Session).Token = ptr("my_token")
 ```
 
 ## API 说明
@@ -305,31 +300,33 @@ val, err := SafeErr(func() string { return *r.A.Name })
 // err: "nil pointer dereference: runtime error: ..."
 ```
 
-### 写入 — Ensure / Set / SetErr
+### 写入 — E / Ensure / Set / SetErr
 
-无需逐层判空即可构建深层嵌套结构体。`Ensure` 自动分配 nil 指针，`Set` 将路径创建与赋值合为一步。
+无需逐层判空即可构建深层嵌套结构体。`E()`（`Ensure` 的简写）自动分配 nil 指针字段并返回值，支持一行链式赋值。
 
 ```go
-// Ensure：沿链路初始化 nil 指针
+// E()：一行链式 — 自动创建所有中间指针并赋值
 var req Request
-Ensure(&req.Auth)
-Ensure(&req.Auth.Key)
-Ensure(&req.Auth.Key.Session)
-// req.Auth.Key.Session 已完全初始化
+E(&E(&E(&req.Auth).Key).Session).Token = ptr("my_token")
 
-// Set：建链 + 赋值一步搞定，返回 bool
-ok := Set(func() *string {
-    Ensure(&req.Auth)
-    Ensure(&req.Auth.Key)
-    Ensure(&req.Auth.Key.Session)
-    return &req.Auth.Key.Session.Token
+// 值类型字段同样适用 — 链到父级直接赋值
+E(&E(&req.Auth).Key).Name = "admin"     // string 字段
+E(&E(&req.Auth).Key).Score = 100        // int 字段
+
+// 拿到引用避免重复链路
+key := E(&E(&req.Auth).Key)
+key.Name = "admin"
+key.Score = 100
+key.Token = ptr("abc")
+
+// Set：链式 + 赋值，带 panic 恢复，返回 bool
+ok := Set(func() **string {
+    return &E(&E(&E(&req.Auth).Key).Session).Token
 }, ptr("my_token"))
 
 // SetErr：类似 Set 但失败时返回 error
-val, err := SetErr(func() *string {
-    Ensure(&req.Auth)
-    Ensure(&req.Auth.Key)
-    return &req.Auth.Key.Session.Token
+_, err := SetErr(func() **string {
+    return &E(&E(&E(&req.Auth).Key).Session).Token
 }, ptr("my_token"))
 // err: "set failed: runtime error: invalid memory address..."
 ```

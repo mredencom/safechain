@@ -72,50 +72,52 @@ func exampleSafeMustOrVal() {
 // ---------- 2. Ensure / Set / SetErr ----------
 
 func exampleEnsureSet() {
-	fmt.Println("--- Ensure / Set / SetErr ---")
+	fmt.Println("--- E / Ensure / Set / SetErr ---")
 
-	// Build a deeply nested struct from scratch — no nil checks
+	// E(): one-liner chain — auto-create all intermediate pointers and assign
 	var req Request
+	sc.E(&sc.E(&sc.E(&req.Auth).Key).Session).Token = ptr("one_liner")
+	fmt.Printf("E() chain:   token=%q\n", *req.Auth.Key.Session.Token)
 
-	// Ensure: auto-allocate nil pointers along the chain
-	sc.Ensure(&req.Auth)
-	sc.Ensure(&req.Auth.Key)
-	sc.Ensure(&req.Auth.Key.Session)
-	fmt.Printf("After Ensure: Session=%v (non-nil)\n", req.Auth.Key.Session != nil)
-
-	// Set: build chain + assign value in one step
+	// Value-type fields — chain to parent, assign directly
 	var req2 Request
+	sc.E(&sc.E(&req2.Auth).Key).Session = &Session{}
+	sc.E(&sc.E(&req2.Auth).Key).Session.Token = ptr("val_type")
+	fmt.Printf("Value field: token=%q\n", *req2.Auth.Key.Session.Token)
+
+	// Grab a reference to set multiple fields at once
+	var req3 Request
+	session := sc.E(&sc.E(&sc.E(&req3.Auth).Key).Session)
+	session.Token = ptr("multi_set")
+	session.RefreshToken = ptr("refresh_abc")
+	fmt.Printf("Multi-set:   token=%q, refresh=%q\n",
+		*req3.Auth.Key.Session.Token, *req3.Auth.Key.Session.RefreshToken)
+
+	// Set: with panic recovery
+	var req4 Request
 	ok := sc.Set(func() **string {
-		sc.Ensure(&req2.Auth)
-		sc.Ensure(&req2.Auth.Key)
-		sc.Ensure(&req2.Auth.Key.Session)
-		return &req2.Auth.Key.Session.Token
+		return &sc.E(&sc.E(&sc.E(&req4.Auth).Key).Session).Token
 	}, ptr("set_token"))
-	fmt.Printf("Set:    ok=%v, token=%q\n", ok, *req2.Auth.Key.Session.Token)
+	fmt.Printf("Set:         ok=%v, token=%q\n", ok, *req4.Auth.Key.Session.Token)
 
 	// Set: overwrite existing value
 	sc.Set(func() *string {
-		return req2.Auth.Key.Session.Token
+		return req4.Auth.Key.Session.Token
 	}, "overwritten")
-	fmt.Printf("Set:    token=%q (overwritten)\n", *req2.Auth.Key.Session.Token)
+	fmt.Printf("Set:         token=%q (overwritten)\n", *req4.Auth.Key.Session.Token)
 
 	// SetErr: get error details on failure
 	var nilReq *Request
 	_, err := sc.SetErr(func() *string {
 		return nilReq.Auth.Key.Session.Token // panics
 	}, "val")
-	fmt.Printf("SetErr: err=%v\n", err != nil)
+	fmt.Printf("SetErr:      err=%v\n", err != nil)
 
-	// Round-trip: Set then Safe read
-	var req3 Request
-	sc.Set(func() **string {
-		sc.Ensure(&req3.Auth)
-		sc.Ensure(&req3.Auth.Key)
-		sc.Ensure(&req3.Auth.Key.Session)
-		return &req3.Auth.Key.Session.Token
-	}, ptr("round_trip"))
-	token := sc.Must(func() string { return *req3.Auth.Key.Session.Token })
-	fmt.Printf("Set→Must: %q\n", token)
+	// Round-trip: E() then Safe read
+	var req5 Request
+	sc.E(&sc.E(&sc.E(&req5.Auth).Key).Session).Token = ptr("round_trip")
+	token := sc.Must(func() string { return *req5.Auth.Key.Session.Token })
+	fmt.Printf("E()→Must:    %q\n", token)
 
 	fmt.Println()
 }

@@ -2,6 +2,10 @@ package safechain
 
 import "testing"
 
+// ============================================================
+// Ensure / E tests
+// ============================================================
+
 func TestEnsure_Nil(t *testing.T) {
 	var root Root
 	Ensure(&root.LevelA)
@@ -19,16 +23,6 @@ func TestEnsure_NonNil(t *testing.T) {
 	}
 }
 
-func TestEnsure_Chain(t *testing.T) {
-	var root Root
-	Ensure(&root.LevelA)
-	Ensure(&root.LevelA.LevelB)
-	Ensure(&root.LevelA.LevelB.LevelC)
-	if root.LevelA.LevelB.LevelC == nil {
-		t.Error("full chain should be initialized")
-	}
-}
-
 func TestEnsure_ReturnValue(t *testing.T) {
 	var root Root
 	a := Ensure(&root.LevelA)
@@ -37,15 +31,39 @@ func TestEnsure_ReturnValue(t *testing.T) {
 	}
 }
 
+func TestEnsure_Chained(t *testing.T) {
+	var root Root
+	Ensure(&Ensure(&Ensure(&root.LevelA).LevelB).LevelC)
+	if root.LevelA.LevelB.LevelC == nil {
+		t.Error("full chain should be initialized")
+	}
+}
+
+func TestE_Chained(t *testing.T) {
+	var root Root
+	E(&E(&E(&root.LevelA).LevelB).LevelC)
+	if root.LevelA.LevelB.LevelC == nil {
+		t.Error("full chain should be initialized via E()")
+	}
+}
+
+func TestE_AssignDirect(t *testing.T) {
+	var root Root
+	E(&E(&E(&root.LevelA).LevelB).LevelC).Value = ptr("direct")
+	if *root.LevelA.LevelB.LevelC.Value != "direct" {
+		t.Errorf("got %q", *root.LevelA.LevelB.LevelC.Value)
+	}
+}
+
+// ============================================================
+// Set tests
+// ============================================================
+
 func TestSet_CreateAndAssign(t *testing.T) {
 	var root Root
-	ok := Set(func() *string {
-		Ensure(&root.LevelA)
-		Ensure(&root.LevelA.LevelB)
-		Ensure(&root.LevelA.LevelB.LevelC)
-		Ensure(&root.LevelA.LevelB.LevelC.Value)
-		return root.LevelA.LevelB.LevelC.Value
-	}, "hello")
+	ok := Set(func() **string {
+		return &E(&E(&E(&root.LevelA).LevelB).LevelC).Value
+	}, ptr("hello"))
 	if !ok {
 		t.Fatal("expected true")
 	}
@@ -64,28 +82,19 @@ func TestSet_Overwrite(t *testing.T) {
 	}
 }
 
-func TestSet_FieldPointer(t *testing.T) {
-	var root Root
-	ok := Set(func() **string {
-		Ensure(&root.LevelA)
-		Ensure(&root.LevelA.LevelB)
-		Ensure(&root.LevelA.LevelB.LevelC)
-		return &root.LevelA.LevelB.LevelC.Value
-	}, ptr("token"))
-	if !ok || *root.LevelA.LevelB.LevelC.Value != "token" {
-		t.Error("set pointer field failed")
-	}
-}
-
 func TestSet_NilPath(t *testing.T) {
 	var root *Root
 	ok := Set(func() *string {
-		return root.LevelA.LevelB.LevelC.Value // panics
+		return root.LevelA.LevelB.LevelC.Value
 	}, "val")
 	if ok {
 		t.Error("expected false for nil root")
 	}
 }
+
+// ============================================================
+// SetErr tests
+// ============================================================
 
 func TestSetErr_Success(t *testing.T) {
 	root := fullRoot()
@@ -106,7 +115,7 @@ func TestSetErr_Panic(t *testing.T) {
 		return root.LevelA.LevelB.LevelC.Value
 	}, "val")
 	if err == nil {
-		t.Error("expected error for nil root panic")
+		t.Error("expected error")
 	}
 }
 
@@ -119,15 +128,15 @@ func TestSetErr_NilPointer(t *testing.T) {
 	}
 }
 
+// ============================================================
+// Round-trip: Set then Safe read
+// ============================================================
+
 func TestSet_ThenRead(t *testing.T) {
 	var root Root
-	Set(func() *string {
-		Ensure(&root.LevelA)
-		Ensure(&root.LevelA.LevelB)
-		Ensure(&root.LevelA.LevelB.LevelC)
-		Ensure(&root.LevelA.LevelB.LevelC.Value)
-		return root.LevelA.LevelB.LevelC.Value
-	}, "round_trip")
+	Set(func() **string {
+		return &E(&E(&E(&root.LevelA).LevelB).LevelC).Value
+	}, ptr("round_trip"))
 
 	val, ok := Safe(func() string { return *root.LevelA.LevelB.LevelC.Value })
 	if !ok || val != "round_trip" {
