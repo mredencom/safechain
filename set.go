@@ -6,6 +6,13 @@ import "fmt"
 // Ensure & Set: nil-safe deep struct initialization and assignment
 // =============================================================================
 
+// Ptr returns a pointer to the given value. Convenience helper for inline use.
+//
+//	token := Ptr("hello")   // *string
+//	score := Ptr(100)       // *int
+//	E(&E(&req.Auth).Key).Token = Ptr("my_token")
+func Ptr[T any](v T) *T { return &v }
+
 // Ensure initializes a nil pointer to a new zero value and returns it.
 // Chain with E() for a compact one-liner.
 //
