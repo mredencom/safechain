@@ -11,42 +11,42 @@ import (
 
 func BenchmarkSafe(b *testing.B) {
 	root := fullRoot()
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		Safe(func() string { return *root.LevelA.LevelB.LevelC.Value })
 	}
 }
 
 func BenchmarkMust(b *testing.B) {
 	root := fullRoot()
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		Must(func() string { return *root.LevelA.LevelB.LevelC.Value })
 	}
 }
 
 func BenchmarkOrVal(b *testing.B) {
 	root := fullRoot()
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		OrVal(func() string { return *root.LevelA.LevelB.LevelC.Value }, "fb")
 	}
 }
 
 func BenchmarkCheck(b *testing.B) {
 	root := fullRoot()
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		Check(func() { _ = *root.LevelA.LevelB.LevelC.Value })
 	}
 }
 
 func BenchmarkNotNil(b *testing.B) {
 	root := fullRoot()
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		NotNil(func() any { return root.LevelA.LevelB.LevelC })
 	}
 }
 
 func BenchmarkAnd(b *testing.B) {
 	root := fullRoot()
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		And(
 			Check(func() { _ = *root.LevelA.LevelB.LevelC.Value }),
 			Check(func() { _ = *root.Meta.TraceID }),
@@ -56,7 +56,7 @@ func BenchmarkAnd(b *testing.B) {
 
 func BenchmarkOr(b *testing.B) {
 	root := &Root{LevelA: nil, Fallback: ptr("fb")}
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		Or(
 			Check(func() { _ = *root.LevelA.LevelB.LevelC.Value }),
 			Check(func() { _ = *root.Fallback }),
@@ -66,63 +66,63 @@ func BenchmarkOr(b *testing.B) {
 
 func BenchmarkEq(b *testing.B) {
 	root := fullRoot()
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		Eq(func() string { return *root.LevelA.LevelB.LevelC.Value }, "abc123")
 	}
 }
 
 func BenchmarkGt(b *testing.B) {
 	r := numRoot(10, 3.14)
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		Gt(func() int { return *r.A.Score }, 5)
 	}
 }
 
 func BenchmarkBetween(b *testing.B) {
 	r := numRoot(10, 3.14)
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		Between(func() int { return *r.A.Score }, 1, 100)
 	}
 }
 
 func BenchmarkIn(b *testing.B) {
 	root := fullRoot()
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		In(func() string { return *root.LevelA.LevelB.LevelC.Value }, "abc123", "xyz", "nope")
 	}
 }
 
 func BenchmarkMatch(b *testing.B) {
 	root := fullRoot()
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		Match(func() string { return *root.LevelA.LevelB.LevelC.Value }, func(v string) bool { return len(v) > 3 })
 	}
 }
 
 func BenchmarkHasPrefix(b *testing.B) {
 	root := fullRoot()
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		HasPrefix(func() string { return *root.LevelA.LevelB.LevelC.Value }, "abc")
 	}
 }
 
 func BenchmarkContains(b *testing.B) {
 	root := fullRoot()
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		Contains(func() string { return *root.LevelA.LevelB.LevelC.Value }, "c12")
 	}
 }
 
 func BenchmarkMap(b *testing.B) {
 	root := fullRoot()
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		Map(func() string { return *root.LevelA.LevelB.LevelC.Value }, func(s string) int { return len(s) })
 	}
 }
 
 func BenchmarkFirst(b *testing.B) {
 	root := fullRoot()
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		First(
 			func() string { return *root.LevelA.LevelB.LevelC.Value },
 			func() string { return "fallback" },
@@ -132,14 +132,14 @@ func BenchmarkFirst(b *testing.B) {
 
 func BenchmarkSafeErr(b *testing.B) {
 	root := fullRoot()
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		SafeErr(func() string { return *root.LevelA.LevelB.LevelC.Value })
 	}
 }
 
 func BenchmarkSafeDig(b *testing.B) {
 	root := fullRoot()
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		SafeDig[string](root,
 			F("LevelA", func(r *Root) any { return r.LevelA }),
 			F("LevelB", func(a *LevelA) any { return a.LevelB }),
@@ -151,7 +151,7 @@ func BenchmarkSafeDig(b *testing.B) {
 
 func BenchmarkMustSafeDig(b *testing.B) {
 	root := fullRoot()
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		MustSafeDig(root,
 			F("LevelA", func(r *Root) any { return r.LevelA }),
 			F("LevelB", func(a *LevelA) any { return a.LevelB }),
@@ -163,7 +163,7 @@ func BenchmarkMustSafeDig(b *testing.B) {
 func BenchmarkDig_4Level(b *testing.B) {
 	root := fullRoot()
 	steps := valueSteps()
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		Dig[string](root, steps...)
 	}
 }
