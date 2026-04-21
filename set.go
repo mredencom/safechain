@@ -29,18 +29,18 @@ func Ensure[T any](pp **T) *T {
 // E is a shorthand alias for Ensure. Designed for compact chaining.
 //
 //	var req Request
-//	E(&E(&E(&req.Auth).Key).Session).Token = ptr("hello")
+//	E(&E(&E(&req.Auth).Key).Session).Token = Ptr("hello")
 func E[T any](pp **T) *T {
 	return Ensure(pp)
 }
 
 // Set safely assigns a value deep in a nested struct.
-// Returns true on success, false if the path panics.
+// Returns true on success, false if the path panics or returns nil.
 //
 //	var req Request
-//	Set(func() *string {
+//	Set(func() **string {
 //	    return &E(&E(&E(&req.Auth).Key).Session).Token
-//	}, ptr("my_token"))
+//	}, Ptr("my_token"))
 func Set[T any](path func() *T, val T) bool {
 	_, err := SetErr(path, val)
 	return err == nil
@@ -48,9 +48,10 @@ func Set[T any](path func() *T, val T) bool {
 
 // SetErr is like Set but returns an error describing the failure.
 //
-//	val, err := SetErr(func() *string {
+//	val, err := SetErr(func() **string {
 //	    return &E(&E(&E(&req.Auth).Key).Session).Token
-//	}, ptr("my_token"))
+//	}, Ptr("my_token"))
+//	// err: "set failed: runtime error: invalid memory address..."
 func SetErr[T any](path func() *T, val T) (result T, err error) {
 	defer func() {
 		if r := recover(); r != nil {

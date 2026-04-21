@@ -7,6 +7,11 @@
 //   - HasPrefix/Contains/MatchRegexp — string and []byte matchers
 //   - Map/IfOk/SafeErr — transform, side-effect, error handling
 //
+// Write API (see set.go):
+//   - E/Ensure — auto-allocate nil pointers along nested chains
+//   - Set/SetErr — nil-safe deep assignment with panic recovery
+//   - Ptr — generic helper for creating pointers inline
+//
 // Advanced (see dig.go):
 //   - SafeDig/SafeDigErr/MustSafeDig + F() — named chain with precise nil field error reporting
 //   - Dig + S() — zero-alloc version using unsafe.Pointer (high performance)
